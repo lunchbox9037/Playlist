@@ -13,22 +13,22 @@ class SongListTableViewController: UITableViewController {
     @IBOutlet weak var artistTextField: UITextField!
     
     // MARK: - Properties
+    var playlist: Playlist?
     
     // MARK: - Lifecyle
     override func viewDidLoad() {
         super.viewDidLoad()
-        //loads any saved songs from the users device
-        SongController.shared.loadFromPersistenceStore()
     }
     
     // MARK: - Actions
     @IBAction func addSongButtonTapped(_ sender: Any) {
         //this guard statement makes sure that there is something in the text fields to pass to the songcontroller object
         guard let songTitle = titleTextField.text, !songTitle.isEmpty,
-              let artistName = artistTextField.text, !artistName.isEmpty else {return}
+              let artistName = artistTextField.text, !artistName.isEmpty,
+              let playlist = playlist else {return}
         
-        SongController.shared.createSong(withTitle: songTitle , withArtist: artistName)
-        
+        SongController.createSong(withTitle: songTitle, withArtist: artistName, forPlaylist: playlist)
+
         tableView.reloadData()
         titleTextField.text = ""
         titleTextField.resignFirstResponder()
@@ -40,14 +40,18 @@ class SongListTableViewController: UITableViewController {
     
     // MARK: - Table view data source
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return SongController.shared.songs.count
+        //nil coalescing opperator
+        return playlist?.songs.count ?? 0
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "songCell", for: indexPath)
         
-        cell.textLabel?.text = SongController.shared.songs[indexPath.row].title
-        cell.detailTextLabel?.text = SongController.shared.songs[indexPath.row].artist
+        guard let song = playlist?.songs[indexPath.row] else {return cell}
+        
+        cell.textLabel?.text = song.title
+        cell.detailTextLabel?.text = song.artist
+        
         return cell
     }
 
@@ -55,7 +59,10 @@ class SongListTableViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             // Delete the row from the data source
-            SongController.shared.delete(thisSong: SongController.shared.songs[indexPath.row])
+            guard let playlist = playlist else {return}
+            let songToDelete = playlist.songs[indexPath.row]
+            
+            SongController.delete(thisSong: songToDelete, inPlaylist: playlist)
             tableView.deleteRows(at: [indexPath], with: .fade)
         }
     }
